@@ -9,6 +9,8 @@ import {
   IContentItemClickedMessageData,
   IElementClickedMessageData,
   IFrameMessageType,
+  IRefreshMessageData,
+  IRefreshMessageMetadata,
   ISDKInitializedMessageData,
   ISDKStatusMessageData,
 } from './IFrameCommunicatorTypes';
@@ -44,6 +46,7 @@ export type IFrameMessagesMap = {
     Callback<IAddButtonPermissionsServerModel>
   >;
   readonly [IFrameMessageType.AddAction]: MessageSignature<IAddActionMessageData, IClickedMessageMetadata>;
+  readonly [IFrameMessageType.Refresh]: MessageSignature<IRefreshMessageData, IRefreshMessageMetadata>;
 };
 
 export interface IFrameMessage<E extends keyof IFrameMessagesMap> {

@@ -26,4 +26,8 @@ export class EventManager<Events extends EventsMap> {
   public removeAllListeners = (): void => {
     this.listeners = new Map<keyof Events, Set<Events[any]>>();
   };
+
+  public hasRegisteredEventListeners = <E extends keyof Events>(event: E): boolean => {
+    return this.listeners.has(event);
+  };
 }

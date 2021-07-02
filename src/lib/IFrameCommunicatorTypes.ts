@@ -67,6 +67,16 @@ export interface IAddActionMessageData extends IAddButtonInitialMessageData {
   readonly action: AddButtonAction;
 }
 
+export interface IRefreshMessageData {
+  readonly projectId: string;
+  readonly languageCodename: string;
+  readonly updatedItemCodename: string;
+}
+
+export interface IRefreshMessageMetadata {
+  readonly forceReload: boolean;
+}
+
 export enum AddButtonElementType {
   LinkedItems = 'LinkedItems',
   RichText = 'RichText',
@@ -99,6 +109,7 @@ export enum IFrameMessageType {
   ContentComponentClicked = 'kontent-smart-link:content-component:clicked',
   Initialized = 'kontent-smart-link:initialized',
   Status = 'kontent-smart-link:status',
+  Refresh = 'kontent-smart-link:refresh',
   AddInitial = 'kontent-smart-link:add:initial',
   AddAction = 'kontent-smart-link:add:action',
 }

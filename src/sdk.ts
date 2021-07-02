@@ -2,12 +2,20 @@ import { isInsideIFrame } from './utils/iframe';
 import { NodeSmartLinkProvider } from './lib/NodeSmartLinkProvider';
 import { createStorage } from './utils/storage';
 import { IFrameCommunicator } from './lib/IFrameCommunicator';
-import { IFrameMessageType, ISDKInitializedMessageData, ISDKStatusMessageData } from './lib/IFrameCommunicatorTypes';
+import {
+  IFrameMessageType,
+  IRefreshMessageData,
+  IRefreshMessageMetadata,
+  ISDKInitializedMessageData,
+  ISDKStatusMessageData,
+} from './lib/IFrameCommunicatorTypes';
 import { QueryParamPresenceWatcher } from './lib/QueryParamPresenceWatcher';
 import { defineAllRequiredWebComponents } from './web-components/components';
 import { ConfigurationManager, IConfigurationManager, IKSLPublicConfiguration } from './lib/ConfigurationManager';
 import { NotInitializedError } from './utils/errors';
 import { Logger, LogLevel } from './lib/Logger';
+import { EventManager } from './lib/EventManager';
+import { reload } from './utils/reload';
 
 interface IKontentSmartLinkIFrameSettings {
   readonly enabled: boolean;
@@ -18,11 +26,14 @@ class KontentSmartLinkSDK {
   private readonly queryParamPresenceWatcher: QueryParamPresenceWatcher;
   private readonly iframeCommunicator: IFrameCommunicator;
   private readonly nodeSmartLinkProvider: NodeSmartLinkProvider;
+  // TODO: maybe use global event bus (same as Configuration)
+  private readonly eventManager: EventManager<any>;
 
   constructor(configuration?: Partial<IKSLPublicConfiguration>) {
     this.configurationManager = ConfigurationManager.getInstance();
     this.configurationManager.update(configuration);
 
+    this.eventManager = new EventManager<any>();
     this.queryParamPresenceWatcher = new QueryParamPresenceWatcher();
     this.iframeCommunicator = new IFrameCommunicator();
 
@@ -46,6 +57,14 @@ class KontentSmartLinkSDK {
     if (isInsideIFrame()) {
       this.initializeIFrameCommunication();
     }
+  };
+
+  public on = (event: string, listener: () => void): void => {
+    this.eventManager.on(event, listener);
+  };
+
+  public off = (event: string, listener: () => void): void => {
+    this.eventManager.off(event, listener);
   };
 
   public destroy = (): void => {
@@ -103,6 +122,25 @@ class KontentSmartLinkSDK {
           enabled: data.enabled,
         });
       });
+
+      this.iframeCommunicator.addMessageListener(
+        IFrameMessageType.Refresh,
+        (data: IRefreshMessageData, metadata: IRefreshMessageMetadata) => {
+          const isHardRefreshRequired = metadata?.forceReload;
+          const hasCustomRefreshHandler = this.eventManager.hasRegisteredEventListeners('refresh');
+
+          console.log('is hard refresh required? ', isHardRefreshRequired);
+          console.log('has custom refresh handler? ', hasCustomRefreshHandler);
+
+          if (isHardRefreshRequired || !hasCustomRefreshHandler) {
+            // if users click on refresh button manually or have no custom refresh handler we refresh the whole page
+            reload();
+          } else {
+            // if users implement their own handler, we call their handler and do not reload the page
+            this.eventManager.emit('refresh', data, reload);
+          }
+        }
+      );
     });
   };
 }
@@ -141,6 +179,22 @@ class KontentSmartLink {
       throw NotInitializedError('KontentSmartLink is not initialized or has already been destroyed.');
     } else {
       this.sdk.updateConfiguration(configuration);
+    }
+  };
+
+  public on = (event: string, handler: () => void): void => {
+    if (!this.sdk) {
+      throw NotInitializedError('KontentSmartLink is not initialized or has already been destroyed.');
+    } else {
+      this.sdk.on(event, handler);
+    }
+  };
+
+  public off = (event: string, handler: () => void): void => {
+    if (!this.sdk) {
+      throw NotInitializedError('KontentSmartLink is not initialized or has already been destroyed.');
+    } else {
+      this.sdk.off(event, handler);
     }
   };
 }
